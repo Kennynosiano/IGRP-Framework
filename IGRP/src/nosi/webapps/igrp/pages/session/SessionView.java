@@ -10,7 +10,7 @@ import nosi.core.config.Config;
 
 public class SessionView extends View {
 	
-	public String title = "Gestão de Sessão";		
+	public String title = "Gestï¿½o de Sessï¿½o";		
 	
 	public Field aplicacao;
 	public Field utilizador;
@@ -29,7 +29,7 @@ public class SessionView extends View {
 	public SessionView(Session model){
 		form_1 = new IGRPForm("form_1");
 		table_1 = new IGRPTable("table_1");
-		chart_t_sessao = new IGRPChart("chart_t_sessao","Total Sessoes");
+		chart_t_sessao = new IGRPChart("chart_t_sessao","Total de Sessoes");
 		chart_t_session_app = new IGRPChart("chart_t_session_app","Total Sessoes por Aplicacao");
 		aplicacao = new ListField(model,"aplicacao");
 		aplicacao.setLabel("Aplicacao");
