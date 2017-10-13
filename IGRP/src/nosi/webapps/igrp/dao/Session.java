@@ -315,42 +315,41 @@ public class Session extends BaseActiveRecord<Session> implements Serializable {
 			if (Igrp.getInstance().getRequest().getMethod().equals("POST")) {
 				sessionModel.load();
 			}
-			// Utilizador autenticado
-			User authenticatedUser = (User) Igrp.getInstance().getUser().getIdentity();
-			String dataInicio = sessionModel.getData_inicio();
-			String dataFim = sessionModel.getData_fim() != null? null: null;
-			String username = sessionModel.getUtilizador() != null ? sessionModel.getUtilizador()
-					: authenticatedUser.getUser_name();
-			int status = sessionModel.getEstado() != 0 ? sessionModel.getEstado() : authenticatedUser.getStatus();
-			int app = sessionModel.getAplicacao() == 0 ? sessionModel.getAplicacao() : 1;
 
-			System.out.println("Data de inicio: " + dataInicio + "Data de fim: " + dataFim);
-			// Armazenar a data atual
 			// =================================================================
 			SimpleDateFormat formatDate = new SimpleDateFormat("yyyy-MM-dd");
 			Date dataAtualAux = new Date();
 			String dataActual = formatDate.format(dataAtualAux);
 			// =================================================================
 
-//			String sqlTotal = "SELECT CONVERT(s.starttime, DATE) as datainicio, s.username, COUNT(*) as total "
-//					+ "FROM TBL_SESSION s " + "WHERE s.starttime BETWEEN '" + dataInicio + "' AND '" + dataFim
-//					+ "' AND" + " s.username = '" + username + "' GROUP BY datainicio ORDER BY datainicio DESC";
-//			
-			String sqlTotal = null;
-			if (dataInicio == null && dataFim == null) {
-				sqlTotal = "SELECT CONVERT(s.starttime, DATE) as datainicio, COUNT(*) as total " + "FROM TBL_SESSION s"
-						+ " WHERE STARTTIME LIKE '%" + dataActual + "%' GROUP BY datainicio";
-			} else {
+			// Authenticaded User
+			// =================================================================
+			User authenticatedUser = (User) Igrp.getInstance().getUser().getIdentity();
+			// =================================================================
 
+			String dataInicio = sessionModel.getData_inicio() == null ? dataActual : sessionModel.getData_inicio();
+			String dataFim = sessionModel.getData_fim() == null ? dataActual : sessionModel.getData_fim();
+			String username = sessionModel.getUtilizador() == null ? authenticatedUser.getUser_name()
+					: sessionModel.getUtilizador();
+			int status = sessionModel.getEstado() != 0 ? sessionModel.getEstado() : authenticatedUser.getStatus();
+			int app = sessionModel.getAplicacao() != 0 ? sessionModel.getAplicacao() : 1;
+
+			if (dataInicio != dataActual) {
 				dataInicio = session.convertDate(sessionModel.getData_inicio(), "dd-MM-yyyy", "yyyy-MM-dd");
 				dataFim = session.convertDate(sessionModel.getData_fim(), "dd-MM-yyyy", "yyyy-MM-dd");
-
-				sqlTotal = "SELECT CONVERT(s.starttime, DATE) as datainicio, s.username, COUNT(*) as total "
-						+ "FROM TBL_SESSION s " + "WHERE s.starttime BETWEEN '" + dataInicio + "' AND '" + dataFim
-						+ "' AND" + " s.username = '" + username + "' GROUP BY datainicio ORDER BY datainicio DESC";
-
 			}
+
+			System.out.println("data inicio " + dataInicio + " data fim " + dataFim + " utilizador " + username
+					+ " status " + status + " Aplicação " + app);
+
+			String sqlTotal = "SELECT CONVERT(s.starttime, DATE) as datainicio, s.username, COUNT(*) as Total "
+					+ "FROM TBL_SESSION s " + "INNER JOIN tbl_user t on t.id = s.user_fk " + "where t.status = '"
+					+ status + "' and t.user_name like '%" + username + "%' " + "and (s.starttime BETWEEN '"
+					+ dataInicio + "' AND '" + dataFim + "') " + "AND s.env_fk = '" + app + "' "
+					+ "GROUP BY CONVERT(s.starttime, DATE) " + "ORDER BY CONVERT(s.starttime, DATE) DESC";
+
 			return sqlTotal;
+
 		}
 
 		// Esta parte é uma teste depois vamos criar um metodo para fzer o tarbalho
