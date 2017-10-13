@@ -12,6 +12,7 @@ import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -26,6 +27,9 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
+
+import org.apache.commons.lang.time.DateUtils;
+
 import nosi.base.ActiveRecord.BaseActiveRecord;
 import nosi.core.config.Connection;
 import nosi.core.gui.components.IGRPBox;
@@ -318,46 +322,54 @@ public class Session extends BaseActiveRecord<Session> implements Serializable {
 
 			// =================================================================
 			SimpleDateFormat formatDate = new SimpleDateFormat("yyyy-MM-dd");
-			Date dataAtualAux = new Date();
-			String dataActual = formatDate.format(dataAtualAux);
+			Date dataAtualFinalAux = DateUtils.addDays(new Date(),1);
+			Date dataAtualInicialAux = DateUtils.addDays(new Date(),-3);
+			String dataActualFinal = formatDate.format(dataAtualFinalAux);
+			String dataActualInicial = formatDate.format(dataAtualInicialAux);
 			// =================================================================
-
+			
+			
 			// Authenticaded User
 			// =================================================================
 			User authenticatedUser = (User) Igrp.getInstance().getUser().getIdentity();
 			// =================================================================
-
-			String dataInicio = sessionModel.getData_inicio() == null ? dataActual : sessionModel.getData_inicio();
-			String dataFim = sessionModel.getData_fim() == null ? dataActual : sessionModel.getData_fim();
+			String dateIGeted = sessionModel.getData_inicio();
+			String dateFGeted = sessionModel.getData_fim();
+			// =================================================================
+			String dataInicio = (dateIGeted == null || dateIGeted.equals("")) ? dataActualInicial : dateIGeted;
+			String dataFim = (dateFGeted == null || dateFGeted.equals("")) ? dataActualFinal : dateFGeted;
 			String username = sessionModel.getUtilizador() == null ? authenticatedUser.getUser_name()
 					: sessionModel.getUtilizador();
-			int status = sessionModel.getEstado() != 0 ? sessionModel.getEstado() : authenticatedUser.getStatus();
-			int app = sessionModel.getAplicacao() != 0 ? sessionModel.getAplicacao() : 1;
+			int status = sessionModel.getEstado();
+			int app = (sessionModel.getAplicacao() == 0) ? 1 : sessionModel.getAplicacao();
 
-			if (dataInicio != dataActual) {
-				dataInicio = session.convertDate(sessionModel.getData_inicio(), "dd-MM-yyyy", "yyyy-MM-dd");
-				dataFim = session.convertDate(sessionModel.getData_fim(), "dd-MM-yyyy", "yyyy-MM-dd");
+			
+			if (dataInicio != dataActualInicial) {
+				dataInicio = session.convertDate(dateIGeted, "dd-MM-yyyy", "yyyy-MM-dd");
 			}
-
-			System.out.println("data inicio " + dataInicio + " data fim " + dataFim + " utilizador " + username
-					+ " status " + status + " Aplicação " + app);
-
+			if (dataFim != dataActualFinal) {
+				dataFim = session.convertDate(dateFGeted, "dd-MM-yyyy", "yyyy-MM-dd");
+			}
+			
+			if (dataInicio.compareTo(dataFim) > 0 || dataInicio.equals(dataFim)) {
+				System.out.println("Esta filtração nao e valida");
+			}
+			
 			String sqlTotal = "SELECT CONVERT(s.starttime, DATE) as datainicio, s.username, COUNT(*) as Total "
 					+ "FROM TBL_SESSION s " + "INNER JOIN tbl_user t on t.id = s.user_fk " + "where t.status = '"
 					+ status + "' and t.user_name like '%" + username + "%' " + "and (s.starttime BETWEEN '"
 					+ dataInicio + "' AND '" + dataFim + "') " + "AND s.env_fk = '" + app + "' "
 					+ "GROUP BY CONVERT(s.starttime, DATE) " + "ORDER BY CONVERT(s.starttime, DATE) DESC";
-
 			return sqlTotal;
-
 		}
+		
 
 		// Esta parte é uma teste depois vamos criar um metodo para fzer o tarbalho
 		public String totalSessionPerAppSql() throws IllegalArgumentException, IllegalAccessException {
 
 			String sqlTopalPerApp = "SELECT CONCAT( a.dad, ' - ', a.name ) as appname, "
 					+ "CONVERT(s.starttime, DATE) as datainicio, COUNT(*) as total " + "FROM TBL_ENV a, TBL_SESSION s "
-					+ "WHERE a.id = s.env_fk AND CONVERT(s.starttime, DATE) " + "BETWEEN '2017-10-02' AND '2017-10-09' "
+					+ "WHERE a.id = s.env_fk AND CONVERT(s.starttime, DATE) " + "BETWEEN '2017-10-02' AND '2017-10-20' "
 					+ "GROUP BY CONCAT( a.dad, ' - ', a.name ), CONVERT(s.starttime, DATE) "
 					+ "ORDER BY CONVERT(s.starttime, DATE) DESC, a.dad DESC";
 			return sqlTopalPerApp;
@@ -383,7 +395,6 @@ public class Session extends BaseActiveRecord<Session> implements Serializable {
 		while (res.next()) {
 			Session.FetchForChart s = new Session.FetchForChart();
 			s.setStart(res.getString("datainicio"));
-			System.out.println("Esta e o retorno dos dados ********" + res.getString("datainicio"));
 			s.setTotal(res.getInt("total"));
 			result.add(s);
 		}
