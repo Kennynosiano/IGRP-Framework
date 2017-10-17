@@ -33,6 +33,7 @@ import org.apache.commons.lang.time.DateUtils;
 import nosi.base.ActiveRecord.BaseActiveRecord;
 import nosi.core.config.Connection;
 import nosi.core.gui.components.IGRPBox;
+import nosi.core.webapp.FlashMessage;
 import nosi.core.webapp.Igrp;
 
 @Entity
@@ -312,6 +313,8 @@ public class Session extends BaseActiveRecord<Session> implements Serializable {
 			this.totalPerApp = totalPerApp;
 		}
 
+		// ========================================================================
+
 		public String totalSessionSql() throws IllegalArgumentException, IllegalAccessException {
 			nosi.webapps.igrp.pages.session.Session sessionModel = new nosi.webapps.igrp.pages.session.Session();
 			Session session = new Session();
@@ -322,13 +325,12 @@ public class Session extends BaseActiveRecord<Session> implements Serializable {
 
 			// =================================================================
 			SimpleDateFormat formatDate = new SimpleDateFormat("yyyy-MM-dd");
-			Date dataAtualFinalAux = DateUtils.addDays(new Date(),1);
-			Date dataAtualInicialAux = DateUtils.addDays(new Date(),-3);
+			Date dataAtualFinalAux = DateUtils.addDays(new Date(), 1);
+			Date dataAtualInicialAux = DateUtils.addDays(new Date(), -3);
 			String dataActualFinal = formatDate.format(dataAtualFinalAux);
 			String dataActualInicial = formatDate.format(dataAtualInicialAux);
 			// =================================================================
-			
-			
+
 			// Authenticaded User
 			// =================================================================
 			User authenticatedUser = (User) Igrp.getInstance().getUser().getIdentity();
@@ -343,18 +345,20 @@ public class Session extends BaseActiveRecord<Session> implements Serializable {
 			int status = sessionModel.getEstado();
 			int app = (sessionModel.getAplicacao() == 0) ? 1 : sessionModel.getAplicacao();
 
-			
 			if (dataInicio != dataActualInicial) {
 				dataInicio = session.convertDate(dateIGeted, "dd-MM-yyyy", "yyyy-MM-dd");
 			}
 			if (dataFim != dataActualFinal) {
 				dataFim = session.convertDate(dateFGeted, "dd-MM-yyyy", "yyyy-MM-dd");
 			}
-			
+
 			if (dataInicio.compareTo(dataFim) > 0 || dataInicio.equals(dataFim)) {
 				System.out.println("Esta filtração nao e valida");
+				// ===================================================================
+				Igrp.getInstance().getFlashMessage().addMessage(FlashMessage.WARNING,
+						"Certifique-se de introduzir intervalo válido");
 			}
-			
+
 			String sqlTotal = "SELECT CONVERT(s.starttime, DATE) as datainicio, s.username, COUNT(*) as Total "
 					+ "FROM TBL_SESSION s " + "INNER JOIN tbl_user t on t.id = s.user_fk " + "where t.status = '"
 					+ status + "' and t.user_name like '%" + username + "%' " + "and (s.starttime BETWEEN '"
@@ -362,27 +366,60 @@ public class Session extends BaseActiveRecord<Session> implements Serializable {
 					+ "GROUP BY CONVERT(s.starttime, DATE) " + "ORDER BY CONVERT(s.starttime, DATE) DESC";
 			return sqlTotal;
 		}
-		
 
-		// Esta parte é uma teste depois vamos criar um metodo para fzer o tarbalho
 		public String totalSessionPerAppSql() throws IllegalArgumentException, IllegalAccessException {
+			nosi.webapps.igrp.pages.session.Session sessionModel = new nosi.webapps.igrp.pages.session.Session();
+			Session session = new Session();
+			// =================================================================
+			if (Igrp.getInstance().getRequest().getMethod().equals("POST")) {
+				sessionModel.load();
+			}
+
+			// =================================================================
+			SimpleDateFormat formatDate = new SimpleDateFormat("yyyy-MM-dd");
+			Date dataAtualFinalAux = DateUtils.addDays(new Date(), 1);
+			Date dataAtualInicialAux = DateUtils.addDays(new Date(), -3);
+			String dataActualFinal = formatDate.format(dataAtualFinalAux);
+			String dataActualInicial = formatDate.format(dataAtualInicialAux);
+			// =================================================================
+
+			// Authenticaded User
+			// =================================================================
+			User authenticatedUser = (User) Igrp.getInstance().getUser().getIdentity();
+			// =================================================================
+			String dateIGeted = sessionModel.getData_inicio();
+			String dateFGeted = sessionModel.getData_fim();
+			// =================================================================
+			String dataInicio = (dateIGeted == null || dateIGeted.equals("")) ? dataActualInicial : dateIGeted;
+			String dataFim = (dateFGeted == null || dateFGeted.equals("")) ? dataActualFinal : dateFGeted;
+			String username = sessionModel.getUtilizador() == null ? authenticatedUser.getUser_name()
+					: sessionModel.getUtilizador();
+			int status = sessionModel.getEstado();
+			int app = (sessionModel.getAplicacao() == 0) ? 1 : sessionModel.getAplicacao();
+
+			if (dataInicio != dataActualInicial) {
+				dataInicio = session.convertDate(dateIGeted, "dd-MM-yyyy", "yyyy-MM-dd");
+			}
+			if (dataFim != dataActualFinal) {
+				dataFim = session.convertDate(dateFGeted, "dd-MM-yyyy", "yyyy-MM-dd");
+			}
+
+			if (dataInicio.compareTo(dataFim) > 0 || dataInicio.equals(dataFim)) {
+				System.out.println("Esta filtração nao e valida");
+				// ===================================================================
+				Igrp.getInstance().getFlashMessage().addMessage(FlashMessage.WARNING,
+						"Certifique-se de introduzir intervalo válido");
+			}
 
 			String sqlTopalPerApp = "SELECT CONCAT( a.dad, ' - ', a.name ) as appname, "
 					+ "CONVERT(s.starttime, DATE) as datainicio, COUNT(*) as total " + "FROM TBL_ENV a, TBL_SESSION s "
-					+ "WHERE a.id = s.env_fk AND CONVERT(s.starttime, DATE) " + "BETWEEN '2017-10-02' AND '2017-10-20' "
-					+ "GROUP BY CONCAT( a.dad, ' - ', a.name ), CONVERT(s.starttime, DATE) "
+					+ "WHERE a.id = s.env_fk AND CONVERT(s.starttime, DATE) " + "BETWEEN '" + dataInicio + "' AND '"
+					+ dataFim + "' " + "GROUP BY CONCAT( a.dad, ' - ', a.name ), CONVERT(s.starttime, DATE) "
 					+ "ORDER BY CONVERT(s.starttime, DATE) DESC, a.dad DESC";
+
 			return sqlTopalPerApp;
 		}
-		// =====================================================================
 	}
-
-	// String sqlTopalPerApp = "SELECT ap.dad, CONVERT(s.starttime, DATE) as
-	// datainicio, COUNT(*) as total "
-	// +"FROM TBL_ENV ap, TBL_SESSION s "
-	// +"WHERE ap.id = s.env_id AND a.starttime BETWEEN yyyy-MM-dd AND yyyy-MM-dd "
-	// +"GROUP BY ap.dad, datainicio "
-	// +"ORDER BY 1, 2";
 
 	public List fechTotalSession() throws SQLException, IllegalArgumentException, IllegalAccessException {
 		List result = new ArrayList<>();
