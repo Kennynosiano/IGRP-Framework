@@ -225,6 +225,7 @@ $(function ($) {
 									xml 	 : $(data).getXMLDocument(),
 									complete : function(c){
 										$(loading,tab).remove();
+										$.WR.document.info.show();
 									},
 									error 	 : function(c){
 										$(loading,tab).remove();
@@ -277,7 +278,7 @@ $(function ($) {
 					'</div></div><div class="col-md-12 form-group">'+
 					'<div class="col-md-4"><label for="'+p.codeName+'">'+p.codeLabel+'</label></div>'+
 					'<div class="col-md-8"><input name="'+p.codeName+'" class="form-control" type="text"/></div></div>'+
-					'<div class="col-md-12 form-group"><div class="col-md-4">'+
+					'<div class="col-md-12 form-group" id="ptsize"><div class="col-md-4">'+
 					'<label for="'+WR.document.config.printsize.name+'">'+WR.document.config.printsize.label+'</label></div>'+
 					'<div class="col-md-8"><select class="form-control" name="'+WR.document.config.printsize.name+'">'+
 					option+'</select></div></div>'+
@@ -294,7 +295,9 @@ $(function ($) {
 						if($.WR.id){ // if edit
 							$('input[name="'+p.titleName+'"]').val(p.title);
 							$('input[name="'+p.codeName+'"]').val(p.code);
-						}
+							$('#ptsize').addClass('hidden');
+						}else
+							$('#ptsize').removeClass('hidden');
 					},
 					buttons 	: [
 						{
@@ -313,10 +316,10 @@ $(function ($) {
 
 								if($.WR.title && $.WR.title != undefined){
 									if(p.action != 'save'){
-
+										
 										if (p.action == 'edit') 
 											data.push({name:'p_id',value:$.WR.id});
-
+										
 										$.WR.document.newOrEdit({
 											url 	: p.url,
 											data 	: data
@@ -357,6 +360,49 @@ $(function ($) {
 					]
 				});
 			},
+			info : {
+				show : function(){
+					var info = $('#wr-list-document .info');
+
+					$('#wr-list-document').on('mouseenter','.infoReport',function(){
+					var li  = $(this).parents('li.treeview:first'),
+						top = li.position().top + 7;
+
+						info.html(li.attr('info')).css({top:top}).addClass('active');
+					});
+
+					$('#wr-list-document').on('mouseleave','.infoReport',function(){
+						info.removeClass('active');
+						$('#wr-list-document li .infoReport i').attr('data-original-title', '').tooltip('hide');
+					});
+				},
+				copy : function(){
+					var copy = document.queryCommandSupported('copy');
+
+					$('#wr-list-document').on('click','.infoReport',function(){
+						var info = $(this).parents('li.treeview:first').attr('info');
+
+						if (copy === true) {
+							var objCopy = document.createElement("textarea");
+							objCopy.value = info;
+							document.body.appendChild(objCopy);
+	    					objCopy.select();
+
+	    					try {
+						      var successful = document.execCommand('copy');
+						      var msg = successful ? 'Copiado!' : 'Não Copiado!';
+						      $('i',$(this)).attr('data-original-title', msg).tooltip('show');
+
+						    } catch (err) {
+						      console.log('Oops, unable to copy');
+						    }
+
+						    document.body.removeChild(objCopy);
+						}else
+							window.prompt("Copy to clipboard: Ctrl+C or Command+C, Enter", info);
+					});
+				}
+			},
 			newOrEdit : function(p){
 				if($.WR.title && !$.WR.id){
 					$('#igrp-app-title').html($.WR.title+' *');
@@ -377,11 +423,15 @@ $(function ($) {
 							type	: 'danger'
 						});
 					})
-					.success(function(e){
-						var type 	= e.type && e.type != undefined ? e.type : 'danger',
-							message = e.msg && e.msg != undefined ? e.msg : 'Erro';
+					.success(function(e,s,r){
+						var xml 	= $(e).find('messages message'),
+							type 	= xml.attr('type') || 'danger',
+							message = xml.text() || 'Erro';
+
+						type = type == 'error' ? 'danger' : type;
+						
 						$.IGRP.notify({
-							message : $.IGRP.utils.htmlDecode(e.msg),
+							message : $.IGRP.utils.htmlDecode(message),
 							type	: type
 						});
 
@@ -490,7 +540,6 @@ $(function ($) {
 					}
 					else if(e.name == 'p_xslreport'){
 						e.value = e.value.replace(/=:WRPZ:=/g,size);
-						console.log(size);
 					}
 				});
 
@@ -757,6 +806,8 @@ $(function ($) {
 				$.WR.document.onSave();
 				$.WR.document.onPreview();
 				$.WR.document.customfooter.onClick();
+				$.WR.document.info.show();
+				$.WR.document.info.copy();
 			}
 		};
 
