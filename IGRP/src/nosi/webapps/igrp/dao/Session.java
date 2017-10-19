@@ -27,6 +27,7 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
+import javax.swing.plaf.basic.BasicTreeUI.SelectionModelPropertyChangeHandler;
 
 import org.apache.commons.lang.time.DateUtils;
 
@@ -312,8 +313,8 @@ public class Session extends BaseActiveRecord<Session> implements Serializable {
 		public void setTotalPerApp(int totalPerApp) {
 			this.totalPerApp = totalPerApp;
 		}
-
 		// ========================================================================
+		
 
 		public String totalSessionSql() throws IllegalArgumentException, IllegalAccessException {
 			nosi.webapps.igrp.pages.session.Session sessionModel = new nosi.webapps.igrp.pages.session.Session();
@@ -330,7 +331,7 @@ public class Session extends BaseActiveRecord<Session> implements Serializable {
 			String dataActualFinal = formatDate.format(dataAtualFinalAux);
 			String dataActualInicial = formatDate.format(dataAtualInicialAux);
 			// =================================================================
-
+System.out.println("*********PPPPPPPPPPPPPPPPP***********"+ sessionModel.getEstado());
 			// Authenticaded User
 			// =================================================================
 			User authenticatedUser = (User) Igrp.getInstance().getUser().getIdentity();
@@ -342,7 +343,7 @@ public class Session extends BaseActiveRecord<Session> implements Serializable {
 			String dataFim = (dateFGeted == null || dateFGeted.equals("")) ? dataActualFinal : dateFGeted;
 			String username = sessionModel.getUtilizador() == null ? authenticatedUser.getUser_name()
 					: sessionModel.getUtilizador();
-			int status = sessionModel.getEstado();
+			int status = sessionModel.getEstado() == 0? authenticatedUser.getStatus():sessionModel.getEstado();
 			int app = (sessionModel.getAplicacao() == 0) ? 1 : sessionModel.getAplicacao();
 
 			if (dataInicio != dataActualInicial) {
@@ -370,12 +371,13 @@ public class Session extends BaseActiveRecord<Session> implements Serializable {
 		public String totalSessionPerAppSql() throws IllegalArgumentException, IllegalAccessException {
 			nosi.webapps.igrp.pages.session.Session sessionModel = new nosi.webapps.igrp.pages.session.Session();
 			Session session = new Session();
+			
 			// =================================================================
 			if (Igrp.getInstance().getRequest().getMethod().equals("POST")) {
 				sessionModel.load();
 			}
-
 			// =================================================================
+			
 			SimpleDateFormat formatDate = new SimpleDateFormat("yyyy-MM-dd");
 			Date dataAtualFinalAux = DateUtils.addDays(new Date(), 1);
 			Date dataAtualInicialAux = DateUtils.addDays(new Date(), -3);
@@ -394,7 +396,7 @@ public class Session extends BaseActiveRecord<Session> implements Serializable {
 			String dataFim = (dateFGeted == null || dateFGeted.equals("")) ? dataActualFinal : dateFGeted;
 			String username = sessionModel.getUtilizador() == null ? authenticatedUser.getUser_name()
 					: sessionModel.getUtilizador();
-			int status = sessionModel.getEstado();
+			int status = sessionModel.getEstado() == 0? authenticatedUser.getStatus():sessionModel.getEstado();
 			int app = (sessionModel.getAplicacao() == 0) ? 1 : sessionModel.getAplicacao();
 
 			if (dataInicio != dataActualInicial) {
@@ -410,19 +412,25 @@ public class Session extends BaseActiveRecord<Session> implements Serializable {
 				Igrp.getInstance().getFlashMessage().addMessage(FlashMessage.WARNING,
 						"Certifique-se de introduzir intervalo válido");
 			}
+			
+			
+			String sqlTopalPerApp= "SELECT CONCAT( a.dad, ' - ', a.name ) as appname, "
+			+"CONVERT(s.starttime, DATE) as datainicio, COUNT(*) as total "
+			+"FROM TBL_ENV a, TBL_SESSION s "
+			+"INNER JOIN tbl_user t on t.id = s.user_fk "
+			+"where t.status = '"+status+"' and t.user_name like '%"+username+"%'  "
+			+"AND a.id = s.env_fk AND s.env_fk = '"+app+"' AND (CONVERT(s.starttime, DATE) "
+			+"BETWEEN '"+dataInicio+"' AND '"+dataFim+"')  "
+			+"GROUP BY CONCAT( a.dad, ' - ', a.name ), CONVERT(s.starttime, DATE) "
+			+"ORDER BY CONVERT(s.starttime, DATE) DESC, a.dad DESC";
 
-			String sqlTopalPerApp = "SELECT CONCAT( a.dad, ' - ', a.name ) as appname, "
-					+ "CONVERT(s.starttime, DATE) as datainicio, COUNT(*) as total " + "FROM TBL_ENV a, TBL_SESSION s "
-					+ "WHERE a.id = s.env_fk AND CONVERT(s.starttime, DATE) " + "BETWEEN '" + dataInicio + "' AND '"
-					+ dataFim + "' " + "GROUP BY CONCAT( a.dad, ' - ', a.name ), CONVERT(s.starttime, DATE) "
-					+ "ORDER BY CONVERT(s.starttime, DATE) DESC, a.dad DESC";
 
 			return sqlTopalPerApp;
 		}
 	}
 
-	public List fechTotalSession() throws SQLException, IllegalArgumentException, IllegalAccessException {
-		List result = new ArrayList<>();
+	public List<nosi.webapps.igrp.dao.Session.FetchForChart> fechTotalSession() throws SQLException, IllegalArgumentException, IllegalAccessException {
+		List<nosi.webapps.igrp.dao.Session.FetchForChart> result = new ArrayList<>();
 		// ======================================Query=============================================
 		Session.FetchForChart session = new Session.FetchForChart();
 		// ========================================================================================
@@ -438,8 +446,8 @@ public class Session extends BaseActiveRecord<Session> implements Serializable {
 		return result;
 	}
 
-	public List fechTotalSessionPerApp() throws SQLException, IllegalArgumentException, IllegalAccessException {
-		List result = new ArrayList<>();
+	public List<nosi.webapps.igrp.dao.Session.FetchForChart> fechTotalSessionPerApp() throws SQLException, IllegalArgumentException, IllegalAccessException {
+		List<nosi.webapps.igrp.dao.Session.FetchForChart> result = new ArrayList<>();
 		// ======================================Query=============================================
 		Session.FetchForChart session = new Session.FetchForChart();
 		// ========================================================================================
@@ -456,8 +464,9 @@ public class Session extends BaseActiveRecord<Session> implements Serializable {
 		return result;
 	}
 
+
 	// ===================================================
-	public static String convertDate(String date, String formatIn, String formatOut) {
+	public String convertDate(String date, String formatIn, String formatOut) {
 		String myDateString = null;
 		try {
 			SimpleDateFormat newDateFormat = new SimpleDateFormat(formatIn);

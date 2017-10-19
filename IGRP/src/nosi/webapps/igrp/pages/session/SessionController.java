@@ -38,24 +38,29 @@ public class SessionController extends Controller {
 
 		Session model = new Session();
 		nosi.webapps.igrp.dao.Session session = new nosi.webapps.igrp.dao.Session();
-
+		
 		if (Igrp.getInstance().getRequest().getMethod().equals("POST")) {
 			model.load();
 		}
-
 		
-			String dateIn = session.convertDate(model.getData_inicio(), "dd-MM-yyyy", "yyyy-MM-dd");
-			String dateOut = session.convertDate(model.getData_inicio(), "dd-MM-yyyy", "yyyy-MM-dd");
+		String dateIn = null;
+		String dateOut = null;
+		java.sql.Timestamp timestamp = java.sql.Timestamp.valueOf("2017-10-12 12:12:59.562");
+
+		if (model.getData_inicio() != null) {
+			dateIn = session.convertDate(model.getData_inicio(), "dd-MM-yyyy", "yyyy-MM-dd");
+			dateOut = session.convertDate(model.getData_inicio(), "dd-MM-yyyy", "yyyy-MM-dd");
 			System.out.println("Aqui estamos a imprimir a data convertida:  " + dateIn);
+		}
 		
-		System.out.println("KKKKK ---  "+model.getEstado());
-
 		ArrayList<Session.Table_1> data = new ArrayList<>();
 		List<nosi.webapps.igrp.dao.Session> sessions = session.find()
 				.andWhere("application", "=", model.getAplicacao() != 0 ? model.getAplicacao() : null)
-				.andWhere("user.user_name", "=", model.getUtilizador()).andWhere("user.status", "=", model.getEstado())
+				.andWhere("user.user_name", "=", model.getUtilizador())
+				.andWhere("user.status", "=", model.getEstado())
+				/*.andWhere("startTime", "=", model.getData_inicio())*/
 				.all();
-
+		
 		for (nosi.webapps.igrp.dao.Session s : sessions) {
 			Session.Table_1 table = new Session().new Table_1();
 
@@ -72,22 +77,21 @@ public class SessionController extends Controller {
 			table.setUtilizador(s.getUserName());
 			data.add(table);
 		}
-
 		SessionView view = new SessionView(model);
+
 		view.table_1.addData(data);
 		
 		view.aplicacao.setValue(new Application().getListApps());
 		
-		HashMap<String, String> status = new HashMap<String, String>();
+		HashMap<Integer, String> status = new HashMap<Integer, String>();
 		status.put(null, "--- Escolher estado ---");
-		status.put("1", "Ativo");
-		status.put("0", "Inativo");
+		status.put(1, "Ativo");
+		status.put(0, "Inativo");
 		view.estado.setValue(status);
 		view.btn_pesquisar.setLink("index&dad=" + dad);
 
 		// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Graficos%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		// ======================================================================================
-		//Total por utilizador
 		ArrayList<Session.Chart_t_sessao> listSessionTotal = new ArrayList<Session.Chart_t_sessao>();
 		List<nosi.webapps.igrp.dao.Session.FetchForChart> result = session.fechTotalSession();
 
